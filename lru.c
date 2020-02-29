@@ -100,4 +100,5 @@ void lru_ref(pgtbl_entry_t *p) {
  * replacement algorithm 
  */
 void lru_init() {
+	start = NULL;
 }
