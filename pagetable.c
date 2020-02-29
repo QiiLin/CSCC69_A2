@@ -36,45 +36,24 @@ int allocate_frame(pgtbl_entry_t *p) {
 		// Call replacement algorithm's evict function to select victim
 		// Note: frame is the actual frame
 		frame = evict_fcn();
-		
-
-		// All frames were in use, so victim frame must hold some page
-		// Write victim page to swap, if needed, and update pagetable
-		// IMPLEMENTATION NEEDED
-		// Thing to know:
-		// 1. the pgdir_entry_t has lower order as status code
-		// 2. pte_t has a frame number if the page is in the physical memory and an offset into swap file if the page has ben writtenout of swap.
-		// 3. coremap is the info about physical memory  
-		
-		/*
-		
-		for (i=0; i < PTRS_PER_PGDIR; i++) {
-			if (pgdir[i].pde != 0) {
-				for (j=0; j < PTRS_PER_PGTBL; i++) {
-					pgtbl_entry_t * curr = (pgtbl_entry_t *) pgdir[i].pde;
-					// if the frame is being used in the current pagetable entry
-					if (curr[j].frame >> PAGE_SHIFT == frame) {
-						// 1. swap it into the swap space and set swap offset( offset value is something that need to reconsider
-						int swapOffset = swap_pageout(frame, curr[j].swap_off);
-						curr[j].swap_off = swapOffset;
-						// 2. also toggle the the value status of page to 0 
-						curr[j].frame =  curr[j].frame ^ PG_VALID;
-						curr[j].frame =  curr[j].frame | PG_ONSWAP;
-					}						
-				}	
-			}	
-		}
-		
-		*/ 
 		pgtbl_entry_t* curr  = coremap[frame].pte;
-		// 1. swap it into the swap space and set swap offset( offset value is something that need to reconsider
-		int swapOffset = swap_pageout(frame, curr->swap_off);
-		curr->swap_off = swapOffset;
-		// 2. also toggle the the value status of page to 0 
-		curr->frame =  curr->frame ^ PG_VALID;
-		curr->frame =  curr->frame | PG_ONSWAP;
 		
-
+		if (curr->frame & PG_DIRTY) {
+			// something changed... we need to update swapfile
+			// 1. swap it into the swap space and set swap offset( offset value is something that need to reconsider
+			int swapOffset = swap_pageout(frame, curr->swap_off);
+			curr->swap_off = swapOffset;
+			// 2. also toggle the the value status of page to 0 
+			curr->frame =  curr->frame ^ PG_VALID;
+			curr->frame =  curr->frame | PG_ONSWAP;
+			// mark the current to no dirty 
+			curr->frame =  curr->frame ^ PG_DIRTY;
+			evict_dirty_count ++;
+		} else {
+			// nothing is changed so far ... so we should just make the page entry invalid
+			curr->frame =  curr->frame ^ PG_VALID;
+			evict_clean_count ++;
+		}
 	}
 
 	// Record information for virtual page that will now be stored in frame
@@ -185,6 +164,8 @@ char *find_physpage(addr_t vaddr, char type) {
 		// should be new status
 		p->frame = frame << PAGE_SHIFT;
 		init_frame(frame, vaddr);
+		// set it to dirty on first action
+		p->frame = p->frame & PG_DIRTY;
 		miss_count ++;
 	} else if ((p->frame & PG_VALID)  == 0 && (p->frame & PG_ONSWAP) == 1) {
 		// physical frame should be allocate and filled by reading the page data from swap
@@ -193,8 +174,9 @@ char *find_physpage(addr_t vaddr, char type) {
 		p->frame = frame << PAGE_SHIFT;
 		int realOffset = swap_pagein(frame, p->swap_off);
 		p->swap_off = realOffset;
-		// mark it swap
-		p->frame = p->frame | PG_ONSWAP;
+		// mark it swap to 0 since it is bening load out 
+		p->frame &= ~PG_DIRTY;
+		p->frame = p->frame ^ PG_ONSWAP;
 		miss_count ++;
 	} else {
 		hit_count ++;

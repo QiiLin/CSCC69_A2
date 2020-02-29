@@ -46,7 +46,7 @@ typedef unsigned long addr_t;
 // These defines allow us to take advantage of the compiler's typechecking
 
 // Page directory entry (top-level)
-typedef struct { 
+typedef struct { // toplevel contains the only one item: uintpter
 	uintptr_t pde; 
 } pgdir_entry_t;
 
@@ -63,7 +63,7 @@ extern void print_pagedirectory(void);
 
 struct frame {
 	char in_use;       // True if frame is allocated, False if frame is free
-	pgtbl_entry_t *pte;// Pointer back to pagetable entry (pte) for page
+	pgtbl_entry_t *pte; // Pointer back to pagetable entry (pte) for page
 	                   // stored in this frame
 };
 

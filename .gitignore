@@ -50,3 +50,14 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+traceprogs/blocked.marker
+traceprogs/matmul.marker
+traceprogs/simpleloop.marker
+traceprogs/tr-blocked.ref
+traceprogs/tr-matmul.ref
+traceprogs/tr-simpleloop.ref
+
+
+
+
