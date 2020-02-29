@@ -41,17 +41,16 @@ int allocate_frame(pgtbl_entry_t *p) {
 		if (curr->frame & PG_DIRTY) {
 			// something changed... we need to update swapfile
 			// 1. swap it into the swap space and set swap offset( offset value is something that need to reconsider
-			int swapOffset = swap_pageout(frame, curr->swap_off);
-			curr->swap_off = swapOffset;
+            assert((curr->swap_off = swap_pageout((unsigned) frame, (int) curr->swap_off)) != INVALID_SWAP);
 			// 2. also toggle the the value status of page to 0 
-			curr->frame =  curr->frame ^ PG_VALID;
+			curr->frame =  curr->frame &~ PG_VALID;
 			curr->frame =  curr->frame | PG_ONSWAP;
 			// mark the current to no dirty 
-			curr->frame =  curr->frame ^ PG_DIRTY;
+			curr->frame =  curr->frame &~ PG_DIRTY;
 			evict_dirty_count ++;
 		} else {
 			// nothing is changed so far ... so we should just make the page entry invalid
-			curr->frame =  curr->frame ^ PG_VALID;
+			curr->frame =  curr->frame &~ PG_VALID;
 			evict_clean_count ++;
 		}
 	}
@@ -147,15 +146,15 @@ char *find_physpage(addr_t vaddr, char type) {
 	pgtbl_entry_t *p=NULL; // pointer to the full page table entry for vaddr
 	unsigned idx = PGDIR_INDEX(vaddr); // get index into page directory
 	
-	if (pgdir[idx].pde == 0) {
-		pgdir[idx] = init_second_level();
-	}
+    if (!(pgdir[idx].pde & PG_VALID)) {
+        pgdir[idx] = init_second_level();
+    }
 	
 	// Use top-level page directory to get pointer to 2nd-level page table
-	pgtbl_entry_t* table = (pgtbl_entry_t *) pgdir[idx].pde;
+	pgtbl_entry_t* table = (pgtbl_entry_t *) (pgdir[idx].pde & PAGE_MASK);
 	// Use vaddr to get index into 2nd-level page table and initialize 'p'
 	unsigned idx_entry = PGTBL_INDEX(vaddr); // get index of page in page table
-	p = (pgtbl_entry_t*) &table[idx_entry];
+	p = &table[idx_entry];
 	
 	// Check if p is valid or not, on swap or not, and handle appropriately
 	if ((p->frame & PG_VALID)  == 0 && (p->frame & PG_ONSWAP) == 0) {
@@ -164,6 +163,7 @@ char *find_physpage(addr_t vaddr, char type) {
 		// should be new status
 		p->frame = frame << PAGE_SHIFT;
 		init_frame(frame, vaddr);
+		p->swap_off = INVALID_SWAP;
 		// set it to dirty on first action
 		p->frame = p->frame & PG_DIRTY;
 		miss_count ++;
@@ -172,11 +172,10 @@ char *find_physpage(addr_t vaddr, char type) {
 		int frame = allocate_frame(p);
 		// should be new status 
 		p->frame = frame << PAGE_SHIFT;
-		int realOffset = swap_pagein(frame, p->swap_off);
-		p->swap_off = realOffset;
+        assert(!swap_pagein((unsigned) frame, (int) p->swap_off));
 		// mark it swap to 0 since it is bening load out 
-		p->frame &= ~PG_DIRTY;
-		p->frame = p->frame ^ PG_ONSWAP;
+		p->frame = p->frame &~ PG_DIRTY;
+		p->frame = p->frame &~ PG_ONSWAP;
 		miss_count ++;
 	} else {
 		hit_count ++;
