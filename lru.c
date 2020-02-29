@@ -18,7 +18,7 @@ struct pgtbl_entry_node {
 	struct pgtbl_entry_node* prev;
 	struct pgtbl_entry_node* next;
 	pgtbl_entry_t* entry;
-};  
+};
 
 struct pgtbl_entry_node* start;
 struct pgtbl_entry_node* end;

@@ -174,8 +174,8 @@ char *find_physpage(addr_t vaddr, char type) {
 		p->frame = frame << PAGE_SHIFT;
         assert(!swap_pagein((unsigned) frame, (int) p->swap_off));
 		// mark it swap to 0 since it is bening load out 
-		p->frame = p->frame &~ PG_DIRTY;
-		p->frame = p->frame &~ PG_ONSWAP;
+		// p->frame = p->frame &~ PG_DIRTY;
+		// p->frame = p->frame &~ PG_ONSWAP;
 		miss_count ++;
 	} else {
 		hit_count ++;
