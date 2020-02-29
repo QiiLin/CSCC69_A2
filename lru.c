@@ -101,4 +101,5 @@ void lru_ref(pgtbl_entry_t *p) {
  */
 void lru_init() {
 	start = NULL;
+	end = NULL;
 }

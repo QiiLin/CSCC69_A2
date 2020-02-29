@@ -58,9 +58,6 @@ traceprogs/tr-blocked.ref
 traceprogs/tr-matmul.ref
 traceprogs/tr-simpleloop.ref
 
-
-
-
 swapfile.*
 
 
