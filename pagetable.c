@@ -25,7 +25,6 @@ int evict_dirty_count = 0;
  */
 int allocate_frame(pgtbl_entry_t *p) {
 	int i;
-	int j;
 	int frame = -1;
 	for(i = 0; i < memsize; i++) {
 		if(!coremap[i].in_use) {
@@ -46,6 +45,9 @@ int allocate_frame(pgtbl_entry_t *p) {
 		// 1. the pgdir_entry_t has lower order as status code
 		// 2. pte_t has a frame number if the page is in the physical memory and an offset into swap file if the page has ben writtenout of swap.
 		// 3. coremap is the info about physical memory  
+		
+		/*
+		
 		for (i=0; i < PTRS_PER_PGDIR; i++) {
 			if (pgdir[i].pde != 0) {
 				for (j=0; j < PTRS_PER_PGTBL; i++) {
@@ -62,6 +64,16 @@ int allocate_frame(pgtbl_entry_t *p) {
 				}	
 			}	
 		}
+		
+		*/ 
+		pgtbl_entry_t* curr  = coremap[frame].pte;
+		// 1. swap it into the swap space and set swap offset( offset value is something that need to reconsider
+		int swapOffset = swap_pageout(frame, curr->swap_off);
+		curr->swap_off = swapOffset;
+		// 2. also toggle the the value status of page to 0 
+		curr->frame =  curr->frame ^ PG_VALID;
+		curr->frame =  curr->frame | PG_ONSWAP;
+		
 
 	}
 
@@ -156,7 +168,10 @@ char *find_physpage(addr_t vaddr, char type) {
 	pgtbl_entry_t *p=NULL; // pointer to the full page table entry for vaddr
 	unsigned idx = PGDIR_INDEX(vaddr); // get index into page directory
 	
-	// IMPLEMENTATION NEEDED
+	if (pgdir[idx].pde == 0) {
+		pgdir[idx] = init_second_level();
+	}
+	
 	// Use top-level page directory to get pointer to 2nd-level page table
 	pgtbl_entry_t* table = (pgtbl_entry_t *) pgdir[idx].pde;
 	// Use vaddr to get index into 2nd-level page table and initialize 'p'
@@ -166,20 +181,29 @@ char *find_physpage(addr_t vaddr, char type) {
 	// Check if p is valid or not, on swap or not, and handle appropriately
 	if ((p->frame & PG_VALID)  == 0 && (p->frame & PG_ONSWAP) == 0) {
 		// physical frame should be allocate and init_frame
-		coremap[p->frame >> PAGE_SHIFT].in_use = 1;
-		init_frame(p->frame >> PAGE_SHIFT, vaddr);
-	}
-	
-	if ((p->frame & PG_VALID)  == 0 && (p->frame & PG_ONSWAP) == 1) {
+		int frame = allocate_frame(p);
+		// should be new status
+		p->frame = frame << PAGE_SHIFT;
+		init_frame(frame, vaddr);
+		miss_count ++;
+	} else if ((p->frame & PG_VALID)  == 0 && (p->frame & PG_ONSWAP) == 1) {
 		// physical frame should be allocate and filled by reading the page data from swap
-		coremap[p->frame >> PAGE_SHIFT].in_use = 1;
-		int realOffset = swap_pagein(p->frame >> PAGE_SHIFT, p->swap_off);
+		int frame = allocate_frame(p);
+		// should be new status 
+		p->frame = frame << PAGE_SHIFT;
+		int realOffset = swap_pagein(frame, p->swap_off);
 		p->swap_off = realOffset;
+		// mark it swap
+		p->frame = p->frame | PG_ONSWAP;
+		miss_count ++;
+	} else {
+		hit_count ++;
 	}
 
 	// Make sure that p is marked valid and referenced. Also mark it
 	p->frame = p->frame | PG_VALID;
 	p->frame = p->frame | PG_REF;
+	ref_count ++ ;
 	// dirty if the access type indicates that the page will be written to.
 	if (type == 'S' || type == 'M') {
 		p->frame = p->frame | PG_DIRTY;
