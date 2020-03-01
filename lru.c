@@ -17,7 +17,7 @@ extern struct frame *coremap;
 struct pgtbl_entry_node {
 	struct pgtbl_entry_node* prev;
 	struct pgtbl_entry_node* next;
-	pgtbl_entry_t* entry;
+	unsigned int frame;
 };
 
 struct pgtbl_entry_node* start;
@@ -34,18 +34,15 @@ struct pgtbl_entry_node* end;
 
 int lru_evict() {
     struct pgtbl_entry_node* temp = end;
-	// if there is not active node here 
-	if (end == NULL) {
-		return -1;
-	}
 	// update end 
-	end = temp->prev;
+	end = temp-> prev;
+	end->next = NULL;
 	// store target entry 
-	pgtbl_entry_t* temp_entry = temp->entry;
+	int res = temp-> frame;
 	// free temp 
 	free(temp);
 	// return target frame
-	return (temp_entry->frame) >> PAGE_SHIFT;
+	return res;
 }
 
 /* This function is called on each access to a page to update any information
@@ -53,46 +50,74 @@ int lru_evict() {
  * Input: The page table entry for the page that is being accessed.
  */
 void lru_ref(pgtbl_entry_t *p) {
-	int found = 0;
-	struct pgtbl_entry_node* curr = start;
-	while(curr != NULL) {
-		if (curr-> entry == p) {
-			found = 1;
-			break;
-		}
-		curr = curr->next;
-	}
-	if (found) {
-		// remove it from list, need to handle next handle start and end 
-		curr->prev->next = curr->next;
-		curr->next->prev = curr->prev;
-		if (curr == start) {
-			start = curr->next;
-		}
-		if (curr == end) {
-			end = curr->prev;
-		}
-	}
 	struct pgtbl_entry_node* temp;
-	if (found) {
-		temp = curr;
-	} else {
-		temp = (struct pgtbl_entry_node *) malloc(sizeof(struct pgtbl_entry_node)); 
-	}
-	temp-> entry = p;
+	struct pgtbl_entry_node* curr = start;
+	int found = 0;
+	// try to assign temp to hold the result
 	if (start == NULL) {
+		// No thing in the list and create a new item
+		temp = (struct pgtbl_entry_node *) malloc(sizeof(struct pgtbl_entry_node));
+		if (temp == NULL) {
+			fprintf(stderr, "Memory allocation failed");
+			exit(1);
+		}
+		temp -> frame = p->frame >> PAGE_SHIFT;
+		temp -> next = NULL;
+		temp -> prev = NULL;
+		
 		start = temp;
 		end = temp;
+		return;
 	} else {
-		start->prev = temp;
-		temp->next = start;
-		start = temp;
+		while (curr != NULL) {
+			if (curr->frame == (p->frame >> PAGE_SHIFT)) {
+				found = 1;
+				break;
+			}
+			curr = curr -> next;
+		}
+		if (found) {
+			if (start == curr) {
+				return;
+			}
+			if (curr == end) {
+				// remove from 
+				end = curr -> prev;
+				end-> next = NULL;
+				curr-> prev = NULL;
+				
+				curr-> next = start;
+				start-> prev = curr; 
+				start = curr;
+				return;
+			}
+			// it is found in the middle 
+			temp = curr;
+			curr->prev->next = curr->next;
+			curr->next->prev = curr->prev;
+			curr->next = NULL;
+			curr->prev = NULL;
+			
+			temp-> next = start;
+			start-> prev = temp; 
+			start = temp;
+			return;
+		} else {
+			temp = (struct pgtbl_entry_node *) malloc(sizeof(struct pgtbl_entry_node));
+			if (temp == NULL) {
+				fprintf(stderr, "Memory allocation failed");
+				exit(1);
+			}
+			temp -> frame = p->frame >> PAGE_SHIFT;
+		    temp -> next = NULL;
+		    temp -> prev = NULL;
+			// add to the head;
+			temp-> next = start;
+			start-> prev = temp; 
+			start = temp;
+			return;
+		}
 	}
-	
-	if (!found) {
-		free(curr);
-	}
-	return;
 }
 
 
