@@ -73,23 +73,23 @@ void lru_ref(pgtbl_entry_t *p) {
 			end = curr->prev;
 		}
 	}
-	if ((p->frame)& PG_VALID) {
-		struct pgtbl_entry_node* temp;
-		if (found) {
-			temp = curr;
-		} else {
-			temp = (struct pgtbl_entry_node *) malloc(sizeof(struct pgtbl_entry_node)); 
-		}
-		temp-> entry = p;
-		if (start == NULL) {
-			start = temp;
-			end = temp;
-		} else {
-			start->prev = temp;
-			temp->next = start;
-			start = temp;
-		}
-	} else if (found) {
+	struct pgtbl_entry_node* temp;
+	if (found) {
+		temp = curr;
+	} else {
+		temp = (struct pgtbl_entry_node *) malloc(sizeof(struct pgtbl_entry_node)); 
+	}
+	temp-> entry = p;
+	if (start == NULL) {
+		start = temp;
+		end = temp;
+	} else {
+		start->prev = temp;
+		temp->next = start;
+		start = temp;
+	}
+	
+	if (!found) {
 		free(curr);
 	}
 	return;
