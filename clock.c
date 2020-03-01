@@ -12,7 +12,7 @@ extern int debug;
 
 extern struct frame *coremap;
 
-int index;
+int clock_index;
 
 
 /* Page to evict is chosen using the clock algorithm.
@@ -21,19 +21,19 @@ int index;
  */
 
 int clock_evict() {
-	// find the index of evict canadiate 
-	while(coremap[index].pte->frame & PG_REF) {
-		coremap[index].pte->frame = coremap[index].pte->frame &~ PG_REF;
-		index ++;
-		if (index >= memsize) {
-			index = index % memsize;
+	// find the clock_index of evict canadiate 
+	while(coremap[clock_index].pte->frame & PG_REF) {
+		coremap[clock_index].pte->frame = coremap[clock_index].pte->frame &~ PG_REF;
+		clock_index ++;
+		if (clock_index >= memsize) {
+			clock_index = clock_index % memsize;
 		}
  	}
-	int res = index;
-	// pass handler to next index
-	index = index ++;
-	if (index >= memsize) {
-		index = index % memsize;
+	int res = clock_index;
+	// pass handler to next clock_index
+	clock_index ++;
+	if (clock_index >= memsize) {
+		clock_index = clock_index % memsize;
 	}
 	return res;
 }
@@ -50,5 +50,5 @@ void clock_ref(pgtbl_entry_t *p) {
  * algorithm. 
  */
 void clock_init() {
-	index = 0;
+	clock_index = 0;
 }
