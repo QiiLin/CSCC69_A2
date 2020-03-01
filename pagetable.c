@@ -174,35 +174,8 @@ char *find_physpage(addr_t vaddr, char type) {
 			init_frame(frame, vaddr);
 			p->swap_off = INVALID_SWAP;
 		}
+		coremap[frame].addrs = vaddr >> PAGE_SHIFT;
 	}
-	
-	/*
-		
-	// Check if p is valid or not, on swap or not, and handle appropriately
-	if (!(p->frame & PG_VALID) && !(p->frame & PG_ONSWAP)) {
-		// physical frame should be allocate and init_frame
-		int frame = allocate_frame(p);
-		// should be new status
-		p->frame = frame << PAGE_SHIFT;
-		init_frame(frame, vaddr);
-		p->swap_off = INVALID_SWAP;
-		// set it to dirty on first action
-		p->frame = p->frame & PG_DIRTY;
-		miss_count ++;
-	} else if (!(p->frame & PG_VALID) && (p->frame & PG_ONSWAP)) {
-		// physical frame should be allocate and filled by reading the page data from swap
-		int frame = allocate_frame(p);
-		// should be new status 
-		p->frame = frame << PAGE_SHIFT;
-        assert(!swap_pagein((unsigned) frame, (int) p->swap_off));
-		// mark it swap to 0 since it is bening load out 
-		// p->frame = p->frame &~ PG_DIRTY;
-		// p->frame = p->frame &~ PG_ONSWAP;
-		miss_count ++;
-	} else {
-		hit_count ++;
-	}
-	*/
 
 	// Make sure that p is marked valid and referenced. Also mark it
 	p->frame = p->frame | PG_VALID;
