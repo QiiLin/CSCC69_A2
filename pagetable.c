@@ -156,8 +156,30 @@ char *find_physpage(addr_t vaddr, char type) {
 	unsigned idx_entry = PGTBL_INDEX(vaddr); // get index of page in page table
 	p = &table[idx_entry];
 	
+	
+	
+	if ((p->frame & PG_VALID)) {
+		hit_count ++;
+	} else {
+		int frame = allocate_frame(p);
+		miss_count ++;
+		if ((p->frame) & PG_ONSWAP) {
+			p->frame = frame << PAGE_SHIFT;
+			assert(!swap_pagein((unsigned) frame, (int) p->swap_off));
+			p->frame = p->frame &~ PG_DIRTY;
+			p->frame = p->frame &~ PG_ONSWAP;
+		} else {
+			p->frame = frame << PAGE_SHIFT;
+			p->frame = p->frame | PG_DIRTY;
+			init_frame(frame, vaddr);
+			p->swap_off = INVALID_SWAP;
+		}
+	}
+	
+	/*
+		
 	// Check if p is valid or not, on swap or not, and handle appropriately
-	if ((p->frame & PG_VALID)  == 0 && (p->frame & PG_ONSWAP) == 0) {
+	if (!(p->frame & PG_VALID) && !(p->frame & PG_ONSWAP)) {
 		// physical frame should be allocate and init_frame
 		int frame = allocate_frame(p);
 		// should be new status
@@ -167,7 +189,7 @@ char *find_physpage(addr_t vaddr, char type) {
 		// set it to dirty on first action
 		p->frame = p->frame & PG_DIRTY;
 		miss_count ++;
-	} else if ((p->frame & PG_VALID)  == 0 && (p->frame & PG_ONSWAP) == 1) {
+	} else if (!(p->frame & PG_VALID) && (p->frame & PG_ONSWAP)) {
 		// physical frame should be allocate and filled by reading the page data from swap
 		int frame = allocate_frame(p);
 		// should be new status 
@@ -180,6 +202,7 @@ char *find_physpage(addr_t vaddr, char type) {
 	} else {
 		hit_count ++;
 	}
+	*/
 
 	// Make sure that p is marked valid and referenced. Also mark it
 	p->frame = p->frame | PG_VALID;
