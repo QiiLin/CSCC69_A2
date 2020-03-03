@@ -34,14 +34,14 @@ struct pgtbl_entry_node* end;
 
 int lru_evict() {
     struct pgtbl_entry_node* temp = end;
-	// update end
+	// update end node
 	end = temp-> prev;
 	end->next = NULL;
 	// store target frame index 
 	int res = temp-> frame;
-	// free temp, since it is being evict, we don't need to keep track it anymore
+	// free temp node, since it is being evict, we don't need to keep track of it anymore
 	free(temp);
-	// return target frame
+	// return target frame number
 	return res;
 }
 
@@ -50,22 +50,23 @@ int lru_evict() {
  * Input: The page table entry for the page that is being accessed.
  */
 void lru_ref(pgtbl_entry_t *p) {
-	// init varaible
+	// init varaibles
 	struct pgtbl_entry_node* temp;
 	struct pgtbl_entry_node* curr = start;
 	int found = 0;
 	// try to assign temp to hold the result
 	if (start == NULL) {
-		// No thing in the list and create a new item
+		// if nothing is currently in the list, create a new node
 		temp = (struct pgtbl_entry_node *) malloc(sizeof(struct pgtbl_entry_node));
 		if (temp == NULL) {
 			fprintf(stderr, "Memory allocation failed");
 			exit(1);
 		}
+		// set values for temp node
 		temp -> frame = p->frame >> PAGE_SHIFT;
 		temp -> next = NULL;
 		temp -> prev = NULL;
-		// set it to start and end
+		// set start node and end node to it since there were nothing in the list before
 		start = temp;
 		end = temp;
 		return;
@@ -117,10 +118,11 @@ void lru_ref(pgtbl_entry_t *p) {
 				fprintf(stderr, "Memory allocation failed");
 				exit(1);
 			}
+			// set values in the temp node
 			temp -> frame = p->frame >> PAGE_SHIFT;
 		    temp -> next = NULL;
 		    temp -> prev = NULL;
-			// add to the head;
+			// add to the head of the linked list
 			temp-> next = start;
 			start-> prev = temp; 
 			start = temp;

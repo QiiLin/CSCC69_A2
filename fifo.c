@@ -13,7 +13,7 @@ extern int debug;
 extern struct frame *coremap; // store all the pysical frame and their status and page 
 
 
-// init the start index of the frame
+// the index of the frame that will be evicted
 int fifo_start;
 
 /* Page to evict is chosen using the fifo algorithm.
@@ -21,15 +21,10 @@ int fifo_start;
  * for the page that is to be evicted.
  */
 int fifo_evict() {
-	// since the frame is being used one by one,
-	// when it is full, we will always evict the 
-	// fifo_start index which start at 0.  
     int result = fifo_start;
-	// after we evict the fifo_start,
-	// we will need to increase fifo_start by one.
-	// this due to fact that frame is being used up one by one
-	// thus, when it is fill again, the next (oldest) frame is just the next 
-    // index of fifo_start. 	
+	// since the pagetable entries are being attached to the coremap sequentially, so the order of eviction
+	// should also be increasing 1 by 1 as well, goes back to 0 when it has already went over all the
+	// indices
     fifo_start = (fifo_start + 1) % memsize;
     return result;
 }
@@ -39,8 +34,8 @@ int fifo_evict() {
  * Input: The page table entry for the page that is being accessed.
  */
 void fifo_ref(pgtbl_entry_t *p) {
-	// since the frame is being used one by one, 
-	// there is not need to adjust any data in this case
+	// there is no need to change anything when a new entry entered, because we just need to evict
+	// by the index fifo_start
 	return;
 }
 
@@ -48,5 +43,6 @@ void fifo_ref(pgtbl_entry_t *p) {
  * replacement algorithm 
  */
 void fifo_init() {
+	// init the index starting from 0
 	fifo_start = 0;
 }

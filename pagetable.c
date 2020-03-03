@@ -36,7 +36,7 @@ int allocate_frame(pgtbl_entry_t *p) {
 		// Call replacement algorithm's evict function to select victim
 		// Note: frame is the actual frame
 		frame = evict_fcn();
-		// takse pagetable entry from coremap 
+		// takes pagetable entry from coremap 
 		pgtbl_entry_t* curr  = coremap[frame].pte;
 		// check if the page table entry 'dirty'
 		if (curr->frame & PG_DIRTY) {
