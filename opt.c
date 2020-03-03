@@ -14,14 +14,13 @@ extern int debug;
 extern struct frame *coremap;
 
 
-// store data from trace file 
+// store one trace call/line from trace file 
 struct trace_node {
 	addr_t addrs;
 	struct trace_node* next;
 };
 
 
-struct trace_node* start;
 struct trace_node* curr;
  
 int* dist_holder; 
@@ -36,6 +35,9 @@ int opt_evict() {
 	int i;
 	int max_distance  = 0;
 	int frame_index = 0;
+	// loop through the distance holder to find 
+	// the frame with max distance(#trace call) from
+	// the next trace call with same address
 	for (i = 0; i < memsize; i++) {
 		if (dist_holder[i] > max_distance) {
 			max_distance = dist_holder[i];
@@ -50,13 +52,18 @@ int opt_evict() {
  * Input: The page table entry for the page that is being accessed.
  */
 void opt_ref(pgtbl_entry_t *p) {
-	// read the file and create list of it 
+	// Since the memo entry calls is being called one by one
+	// just like what is in the trace file
+	// we are doing the same to keep up with the calls
 	struct trace_node* item = curr;
 	curr = curr-> next;
 	free(item);
+	
 	int frame_index = p->frame >> PAGE_SHIFT;
 	struct trace_node* temp = curr;
 	int distance = 0;
+	// and then loop from curr node(current line in tracefile)
+	// to the next trace call with same address in the tracefile and store its distance
 	while(temp != NULL) {
 		if (temp -> addrs == coremap[frame_index].addrs) {
 			break;
@@ -64,7 +71,9 @@ void opt_ref(pgtbl_entry_t *p) {
 		temp = temp-> next;
 		distance ++; 
 	}
-	
+	// it maybe the case that the next trace call in trace file is not found
+	// then according to the trace file, the current p's frame with same address is not going to 
+	// be used again. Thus I can set the distance to the (max possible distance)number of line in tracefile
 	dist_holder[frame_index] = (temp == NULL) ? numberOfLine : distance;
 	return;
 }
@@ -81,7 +90,7 @@ void opt_init() {
 	}
 	
 	// init start and curr to NULL
-	start = NULL;
+	struct trace_node* start = NULL;
 	curr = NULL;
 	
 	// start reading from trace file 
@@ -107,7 +116,7 @@ void opt_init() {
 			temp->addrs = vaddr >> PAGE_SHIFT;
 			temp->next = NULL;
 			
-			// is it init case 
+			// handle the case the linked list is empty 
 			if (start == NULL) {
 				start = temp;
 				curr = temp;
@@ -120,7 +129,8 @@ void opt_init() {
 		}
 	}
 	// after we finish getting the data from trace file
-	// we reset the curr to the start fo the list 
+	// we reset the curr to the start fo the list
+	// so that we can start prediction from the start
 	curr = start;
 }
 

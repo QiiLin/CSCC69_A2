@@ -36,16 +36,21 @@ int allocate_frame(pgtbl_entry_t *p) {
 		// Call replacement algorithm's evict function to select victim
 		// Note: frame is the actual frame
 		frame = evict_fcn();
+		// takse pagetable entry from coremap 
 		pgtbl_entry_t* curr  = coremap[frame].pte;
-		
+		// check if the page table entry 'dirty'
 		if (curr->frame & PG_DIRTY) {
-			// something changed... we need to update swapfile
-			// 1. swap it into the swap space and set swap offset( offset value is something that need to reconsider
-            assert((curr->swap_off = swap_pageout((unsigned) frame, (int) curr->swap_off)) != INVALID_SWAP);
-			// 2. also toggle the the value status of page to 0 
+			// if it is dirty than means something changed, then we can't just discard
+			// we need to save it in the swap space
+			
+			// 1. swap it into the swap space and set swap offset
+			curr->swap_off = swap_pageout((unsigned) frame, (int) curr->swap_off);
+			// check if the swap works
+            assert(curr->swap_off != INVALID_SWAP);
+			// 2. set the frame to invalid and on swap
 			curr->frame =  curr->frame &~ PG_VALID;
 			curr->frame =  curr->frame | PG_ONSWAP;
-			// mark the current to no dirty 
+			// 3. mark the current to no dirty 
 			curr->frame =  curr->frame &~ PG_DIRTY;
 			evict_dirty_count ++;
 		} else {
@@ -153,24 +158,36 @@ char *find_physpage(addr_t vaddr, char type) {
 	// Use top-level page directory to get pointer to 2nd-level page table
 	pgtbl_entry_t* table = (pgtbl_entry_t *) (pgdir[idx].pde & PAGE_MASK);
 	// Use vaddr to get index into 2nd-level page table and initialize 'p'
-	unsigned idx_entry = PGTBL_INDEX(vaddr); // get index of page in page table
-	p = &table[idx_entry];
+	// get index of page in page table
+	unsigned idx_entry = PGTBL_INDEX(vaddr);
+	// found the target pagetable entry 
+	p = &table[idx_entry]; 
 	
-	
-	
+	// check if the frame is valid 
 	if ((p->frame & PG_VALID)) {
+		// if it is valid, there is no need to do frame allocation
 		hit_count ++;
 	} else {
+		// if it invalid, we need to allocate frame for it and
+		// we already miss hitting the frame
 		int frame = allocate_frame(p);
 		miss_count ++;
+		// if pagetable has data in swap space
 		if ((p->frame) & PG_ONSWAP) {
 			p->frame = frame << PAGE_SHIFT;
-			assert(!swap_pagein((unsigned) frame, (int) p->swap_off));
+			// fetch it from the swap space
+			int res = swap_pagein((unsigned) frame, (int) p->swap_off);
+			// check if the read failed
+			assert(!res);
 		} else {
 			p->frame = frame << PAGE_SHIFT;
+			// if it is no onswap, we need to init a new frame for it
 			init_frame(frame, vaddr);
 			p->swap_off = INVALID_SWAP;
 		}
+		// the following is need for opt
+		// it stores which memory address is being 
+		// called or invoke or used for the physical frame 
 		coremap[frame].addrs = vaddr >> PAGE_SHIFT;
 	}
 
