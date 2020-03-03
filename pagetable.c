@@ -166,11 +166,8 @@ char *find_physpage(addr_t vaddr, char type) {
 		if ((p->frame) & PG_ONSWAP) {
 			p->frame = frame << PAGE_SHIFT;
 			assert(!swap_pagein((unsigned) frame, (int) p->swap_off));
-			p->frame = p->frame &~ PG_DIRTY;
-			p->frame = p->frame &~ PG_ONSWAP;
 		} else {
 			p->frame = frame << PAGE_SHIFT;
-			p->frame = p->frame | PG_DIRTY;
 			init_frame(frame, vaddr);
 			p->swap_off = INVALID_SWAP;
 		}

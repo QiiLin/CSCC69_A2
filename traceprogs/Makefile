@@ -1,5 +1,5 @@
-SRCS = simpleloop.c matmul.c blocked.c
-PROGS = simpleloop matmul blocked
+SRCS = simpleloop.c matmul.c blocked.c avlinsertion.c
+PROGS = simpleloop matmul blocked avlinsertion
 
 all : $(PROGS)
 
@@ -11,6 +11,7 @@ traces: $(PROGS)
 	./runit simpleloop
 	./runit matmul 100
 	./runit blocked 100 25
+	./runit avlinsertion
 
 .PHONY: clean
 clean : 

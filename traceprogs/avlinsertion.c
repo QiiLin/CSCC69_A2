@@ -8,7 +8,7 @@ struct node {
 	int height;
 	struct node *left;
 	struct node *right;
-}
+};
 
 // Get the height of the node
 int height(struct node *N) {
@@ -30,7 +30,7 @@ int compare(int first, int second) {
 
 // Allocate a new node
 struct node* newNode(int key) {
-	struct node* node = (struct node*)malloc(sizeof(struct Node));
+	struct node* node = (struct node*)malloc(sizeof(struct node));
 	node -> key = key;
 	node -> left = NULL;
 	node -> right = NULL;
@@ -58,8 +58,8 @@ struct node *leftRotate(struct node *x) {
 	y->left = x; 
     x->right = T2; 
     //  Update heights 
-    x->height = max(height(x->left), height(x->right))+1; 
-    y->height = max(height(y->left), height(y->right))+1; 
+    x->height = compare(height(x->left), height(x->right))+1; 
+    y->height = compare(height(y->left), height(y->right))+1; 
     // Return new root 
     return y; 
 }
@@ -88,7 +88,7 @@ struct node* insert(struct node* node, int key)
         return node; 
   
     /* 2. Update height of this ancestor node */
-    node->height = 1 + max(height(node->left), 
+    node->height = 1 + compare(height(node->left), 
                            height(node->right)); 
   
     /* 3. Get the balance factor of this ancestor 
@@ -125,7 +125,7 @@ struct node* insert(struct node* node, int key)
     return node; 
 }
 
-void preOrder(struct Node *root) 
+void preOrder(struct node *root) 
 { 
     if(root != NULL) 
     { 
@@ -137,11 +137,11 @@ void preOrder(struct Node *root)
 
 int main(int argc, char ** argv) {
 	struct node *testTree = NULL;
-	for (i = 0; i < 8, i++) {
-		testTree = insert(i, i * 3);
-		testTree = insert(i, i * 2);
+	for (int i = 0; i < 8; i++) {
+		testTree = insert(testTree, i * 3);
+		testTree = insert(testTree, i * 2);
 	}
 	testTree = insert(testTree, 30);
-	printf('Preorder traversal of the tree is \n');
+	printf("Preorder traversal of the tree is \n");
 	return 0;
 }
